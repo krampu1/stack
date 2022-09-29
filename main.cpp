@@ -4,8 +4,9 @@
 #include "stack/stack.h"
 
 int main() {
-    Stack stack = {};
-    add_info_where_created(stack);
+    stack_create(stack);
+
+    //stack_dump((&stack));
     
     for (int i = 0; i < 20; i++) {
         stack_push(&stack, i);
@@ -13,17 +14,17 @@ int main() {
     
     printf("%d\n", stack_pop(&stack));
 
-    for (int i = 0; i < 20 ; i++) {
+    //stack_dump((&stack));
+
+    for (int i = 0; i < 15 ; i++) {
         stack_push(&stack, i);
     }
 
-    stack_dump((&stack));
-
     for (int i = 0; stack.size; i++) {
-        printf("%d ", stack_pop(&stack));
+        printf("%d %d\n", stack_pop(&stack), stack.capacity);
     }
 
     stack_del(&stack);
-    
-    stack_pop(&stack);
+
+    //stack_dump((&stack));
 }
