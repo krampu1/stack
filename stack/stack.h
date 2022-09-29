@@ -18,24 +18,28 @@ enum Stack_defoult_values{
 
 #define min(a, b) (a < b ? a : b)
 
-#define stack_create(stack) Stack stack = {};                                                             \
-                            stack.canary_left  = (unsigned int)2283001337;                                \
-                            stack.data         = (Type_t *)recalloc((void *)4, DEFOLT_STACK_SIZE, sizeof(Type_t));\
-                            stack.size         = 0;                                                       \
-                            stack.capacity     = DEFOLT_STACK_SIZE;                                       \
-                            stack.name         = (char *)#stack;                                          \
-                            stack.line         = (size_t)__LINE__;                                        \
-                            stack.file         = (char *)__FILE__;                                        \
-                            stack.func         = (char *)__FUNCTION__;                                    \
-                            stack.hash         = 0;                                                       \
-                            stack.data_hash    = 0;                                                       \
-                            stack.data_fprintf = (void (*)(FILE *, void *))defoult_data_fprintf;          \
-                            stack.canary_right = (unsigned int)2283001337;
+#define stack_create(stack) Stack stack = {};                                                                      \
+                            stack.canary_left  = (unsigned int)2283001337;                                         \
+                            stack.data         = (Type_t *)recalloc((void *)4, DEFOLT_STACK_SIZE, sizeof(Type_t)); \
+                            stack.size         = 0;                                                                \
+                            stack.capacity     = DEFOLT_STACK_SIZE;                                                \
+                            stack.name         = (char *)#stack;                                                   \
+                            stack.line         = (size_t)__LINE__;                                                 \
+                            stack.file         = (char *)__FILE__;                                                 \
+                            stack.func         = (char *)__FUNCTION__;                                             \
+                            stack.hash         = 0;                                                                \
+                            stack.data_hash    = 0;                                                                \
+                            stack.data_fprintf = (void (*)(FILE *, void *))defoult_data_fprintf;                   \
+                            stack.canary_right = (unsigned int)2283001337;                                         \
+                            stack.hash         = calculate_hash((char *)&stack, sizeof(stack));                    \
+                            stack.data_hash    = calculate_hash((char *)(stack.data), DEFOLT_STACK_SIZE * sizeof(Type_t));
 
 #define stack_error(stack) stack->size > stack->capacity || stack->data == (Type_t *)STACK_DEL_PTR || stack->capacity == 0 || \
-                           stack->canary_left != 2283001337 || stack->canary_right != 2283001337 || \
-                           *((unsigned int *)((char *)(stack->data) - 4)) != 2283001337 || \
-                           *((unsigned int *)((char *)(stack->data) + stack->capacity * sizeof(Type_t))) != 2283001337
+                           stack->canary_left != 2283001337 || stack->canary_right != 2283001337                           || \
+                           *((unsigned int *)((char *)(stack->data) - 4)) != 2283001337                                    || \
+                           *((unsigned int *)((char *)(stack->data) + stack->capacity * sizeof(Type_t))) != 2283001337     ||\
+                           !hash_is_good(stack)
+
 
 #define stack_dump(stack) {FILE *ptr_log_file = fopen("log.out", "a");                                              \
                            fprintf(ptr_log_file, "error in %s() at %s(%ld):\n", __FUNCTION__, __FILE__, __LINE__);  \
@@ -43,6 +47,8 @@ enum Stack_defoult_values{
                            fprintf(ptr_log_file, "  \"%s\" at %s() at %s\n", stack->name, stack->func, stack->file);\
                            fprintf(ptr_log_file, "  {\n    size = %ld\n", stack->size);                             \
                            fprintf(ptr_log_file, "    capacity = %ld\n",  stack->capacity);                         \
+                           fprintf(ptr_log_file, "    hash = %ld\n",  stack->hash);                                 \
+                           fprintf(ptr_log_file, "    data hash = %ld\n",  stack->data_hash);                       \
                            fprintf(ptr_log_file, "    data[%p]\n",        stack->data);                             \
                                                                                                                     \
                            for (size_t i = 0; i < stack->capacity; i++) {                                           \
@@ -79,6 +85,21 @@ enum Stack_defoult_values{
 #define stack_assert(stack)
 #endif
 
+unsigned int calculate_hash(char *data, size_t data_size) {
+    unsigned int hash = 0;
+
+    for (size_t i = 0; i < data_size; i++) {
+        hash += (unsigned char)data[i];
+        hash += (hash << 10);
+        hash ^= (hash >> 6);
+    }
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+
+    return hash;
+}
+
 void *recalloc(void *data, size_t data_size, size_t elem_size) {
     static size_t alloc = 0;
 
@@ -105,18 +126,54 @@ void defoult_data_fprintf(FILE *file, void *data) {
 
 struct Stack{
     unsigned int canary_left;
+
     Type_t       *data;
     size_t       size;
     size_t       capacity;
+
     char         *name;
     size_t       line;
     char         *file;
     char         *func;
+
     void         (* data_fprintf)(FILE *, void *);
-    long long    hash;
-    long long    data_hash;
+
+    unsigned int hash;
+    unsigned int data_hash;
+
     unsigned int canary_right;
 };
+
+void recalculate_stack_hash(Stack *stack) {
+    stack->hash      = 0;
+    stack->data_hash = 0;
+    stack->hash      = calculate_hash((char *)stack, sizeof(Stack));
+    stack->data_hash = calculate_hash((char *)(stack->data), stack->capacity * sizeof(Type_t));
+}
+
+bool hash_is_good(Stack *stack) {
+    unsigned int hash      = stack->hash;
+    unsigned int data_hash = stack->data_hash;
+    stack->hash      = 0;
+    stack->data_hash = 0;
+
+    recalculate_stack_hash(stack);
+
+    if (hash == stack->hash && data_hash == stack->data_hash) {
+        return true;
+    }
+    return false;
+}
+
+void stack_change_out_funk(Stack *stack, void (* data_fprintf)(FILE *, void *)) {
+    stack_assert(stack);
+
+    stack->data_fprintf = data_fprintf;
+
+    recalculate_stack_hash(stack);
+    
+    stack_assert(stack);
+}
 
 size_t stack_resize(Stack *stack) {
     stack_assert(stack);
@@ -154,6 +211,8 @@ size_t stack_resize(Stack *stack) {
         stack->capacity = stack->size * 2;
     }
 
+    recalculate_stack_hash(stack);
+
     stack_assert(stack);
 
     return stack->capacity;
@@ -167,6 +226,8 @@ size_t stack_push(Stack* stack, Type_t a) {
     }
     
     *(stack->data+(stack->size++)) = a;
+
+    recalculate_stack_hash(stack);
 
     stack_assert(stack);
 
@@ -186,6 +247,8 @@ Type_t stack_pop(Stack* stack) {
     
     *((char *)(&(stack->data[stack->size]))) = POISON_CHAR;
 
+    recalculate_stack_hash(stack);
+
     stack_resize(stack);
 
     stack_assert(stack);
@@ -203,4 +266,6 @@ void stack_del(Stack* stack) {
     stack->size = 1;
 
     stack->capacity = 0;
+
+    recalculate_stack_hash(stack);
 }
