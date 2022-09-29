@@ -148,7 +148,7 @@ void recalculate_stack_hash(Stack *stack) {
     stack->hash      = 0;
     stack->data_hash = 0;
     stack->hash      = calculate_hash((char *)stack, sizeof(Stack));
-    stack->data_hash = calculate_hash((char *)(stack->data), stack->capacity * sizeof(Type_t));
+    stack->data_hash = calculate_hash((char *)(stack->data), stack->capacity * sizeof(int));
 }
 
 bool hash_is_good(Stack *stack) {
@@ -197,7 +197,7 @@ size_t stack_resize(Stack *stack) {
              return 0;
         }
 
-        stack->capacity = stack->size * 2;
+        stack->capacity = stack->size * 4;
     }
 
     if (stack->size * 4 <= stack->capacity && stack->size * 2 >= DEFOLT_STACK_SIZE) {
