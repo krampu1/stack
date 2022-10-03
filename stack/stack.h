@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+const char *log_file_path = "log.out";
+
 enum Stack_default_values{
     DEFAULT_STACK_SIZE = 10,
     STACK_DEL_PTR      = 1337,
@@ -54,12 +56,12 @@ static void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name
     #define stack_assert(stack)
 #endif
 
-#define stack_dump(stack) {FILE *ptr_log_file = fopen("log.out", "a");                                 \
+#define stack_dump(stack) {FILE *ptr_log_file = fopen(log_file_path, "a");                            \
                            _stack_dump(ptr_log_file, stack, #stack, __LINE__, __FILE__, __FUNCTION__);\
                            fclose(ptr_log_file);                                                      \
                           }
 
-#define memory_alloc_error() {FILE *ptr_log_file = fopen("log.out", "a");                                                             \
+#define memory_alloc_error() {FILE *ptr_log_file = fopen(log_file_path , "a");                                                        \
                               fprintf(ptr_log_file, "memory allocation error in %s() at %s(%ld)\n", __FUNCTION__, __FILE__, __LINE__);\
                               fclose(ptr_log_file);                                                                                   \
                              }
@@ -103,7 +105,7 @@ static void _stack_create(Stack *stack, char *name, size_t line, char *file, cha
         _stack_create(stack, (char *)#stack, (size_t)__LINE__, (char *)__FILE__, (char *)__FUNCTION__)
                             
 
-bool stack_error(Stack *stack) {
+static bool stack_error(Stack *stack) {
     if (stack == nullptr) return true;
 
     if (stack->size > stack->capacity) return true;
@@ -130,11 +132,11 @@ bool stack_error(Stack *stack) {
     return false;
 }
 
-void default_data_fprintf(FILE *file, void *data) {
+static void default_data_fprintf(FILE *file, void *data) {
     fprintf(file, "%d", data);
 }
 
-void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name, const size_t line, const char *file, const char *func) {
+static void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name, const size_t line, const char *file, const char *func) {
     assert(ptr_log_file != nullptr);
 
     fprintf(ptr_log_file, "error in %s() at %s(%ld):\n", func, file, line);
@@ -175,7 +177,7 @@ void _stack_dump(FILE *ptr_log_file, const Stack *stack, const char *name, const
     fclose(ptr_log_file);
 }
 
-unsigned int calculate_hash(char *data, size_t data_size) {
+static unsigned int calculate_hash(char *data, size_t data_size) {
     assert(data != nullptr);
 
     unsigned int hash = 0;
@@ -192,7 +194,7 @@ unsigned int calculate_hash(char *data, size_t data_size) {
     return hash;
 }
 
-void *recalloc(void *data, size_t data_size, size_t elem_size, size_t *alloc) {
+static void *recalloc(void *data, size_t data_size, size_t elem_size, size_t *alloc) {
     assert(alloc != nullptr);
 
 #ifdef CANARY_PROT
@@ -216,7 +218,7 @@ void *recalloc(void *data, size_t data_size, size_t elem_size, size_t *alloc) {
     return data;
 }
 
-void recalculate_stack_hash(Stack *stack) {
+static void recalculate_stack_hash(Stack *stack) {
     assert(stack != nullptr);
 
     stack->hash      = 0;
@@ -225,7 +227,7 @@ void recalculate_stack_hash(Stack *stack) {
     stack->data_hash = calculate_hash((char *)(stack->data), stack->capacity * sizeof(Type_t));
 }
 
-bool hash_is_good(Stack *stack) {
+static bool hash_is_good(Stack *stack) {
     assert(stack != nullptr);
 
     unsigned int hash      = stack->hash;
@@ -241,7 +243,7 @@ bool hash_is_good(Stack *stack) {
     return false;
 }
 
-void stack_change_out_funk(Stack *stack, void (* data_fprintf)(FILE *, void *)) {
+static void stack_change_out_funk(Stack *stack, void (* data_fprintf)(FILE *, void *)) {
     assert(data_fprintf != nullptr);
 
     stack_assert(stack);
@@ -255,7 +257,7 @@ void stack_change_out_funk(Stack *stack, void (* data_fprintf)(FILE *, void *)) 
     stack_assert(stack);
 }
 
-size_t stack_resize(Stack *stack) {
+static size_t stack_resize(Stack *stack) {
     stack_assert(stack);
 
     size_t new_stack_capacity = stack->capacity;
