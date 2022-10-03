@@ -4,11 +4,16 @@ void int_fprintf(FILE *file, void *data) {
     fprintf(file, "%d", *(int *)data);
 }
 
-#define Type_t int
+typedef int Type_t;
+#define CANARY_PROT
+#define HASH_PROT
 #include "stack/stack.h"
 
 int main() {
-    stack_create(stack);
+    //setvbuf
+    Stack stack = {};
+    stack_create(&stack);
+    
     stack_change_out_funk(&stack, (void (*)(FILE *, void *))int_fprintf);
 
     //stack_dump((&stack));
