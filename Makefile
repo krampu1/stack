@@ -1,1 +1,4 @@
-all: g++ main.cpp
+FLUGS := 
+
+
+all: g++ &(FLUGS) main.cpp

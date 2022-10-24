@@ -1,8 +1,5 @@
 #include <stdio.h>
-
-void int_fprintf(FILE *file, void *data) {
-    fprintf(file, "%d", *(int *)data);
-}
+static void int_fprintf(FILE *file, void *data);
 
 typedef int Type_t;
 #define CANARY_PROT
@@ -31,10 +28,14 @@ int main() {
     }
 
     for (int i = 0; stack.size; i++) {
-        printf("%d %d\n", stack_pop(&stack), stack.capacity);
+        printf("%d %zu\n", stack_pop(&stack), stack.capacity);
     }
 
     stack_del(&stack);
 
     //stack_dump((&stack));
+}
+
+static void int_fprintf(FILE *file, void *data) {
+    fprintf(file, "%d", *(int *)data);
 }
